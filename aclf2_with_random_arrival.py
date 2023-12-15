@@ -20,18 +20,26 @@ warnings.filterwarnings("ignore")
 pre_transplant = pd.read_csv('pre_transplant_3states.csv')
 
 post_transplant = pd.read_csv('post_transplant_3states.csv')
-c_k = 5000
+c_k = 2000
 print(post_transplant)
 
 ##########################################################
+def compute_a(gamma,o,lambda_):
+    return o*(1-gamma)*lambda_**2
+def compute_b(gamma,o,lambda_):
+    return 1*lambda_+(1-o)*(1-gamma)*lambda_**2
+def compute_c(gamma,o,lambda_):
+    return (gamma-1)*lambda_**2
 
-def mdp(alpha,beta,rr,small):
+
+
+def mdp(omega,alpha,beta,rr,small,test):
     gamma1 = 1-pre_transplant['state1']
     gamma2 = 1-pre_transplant['state2']
     gamma3 = 1-pre_transplant['state3']
-    omega1 = 0.9
-    omega2 = 0.95
-    omega3 = 1
+    omega1 = omega[0]#0.9
+    omega2 = omega[1]#0.95
+    omega3 = omega[2]
     rw = _np.zeros([14*2,11,2])
     new_rw = _np.zeros([14,11,2])
     new_tp = _np.zeros([14,2,11,11])
@@ -43,6 +51,23 @@ def mdp(alpha,beta,rr,small):
     term_rw=_np.array([0,0,0,0,0,0,0,0,0,0,0],dtype=float)
     for tt in range(14):
         t = 2*tt
+        if test ==0:
+            omega1 = omega[0]
+            omega2 = omega[1]
+            omega3 = omega[2]
+        else:
+            a = compute_a(gamma1[t],alpha[t],_lambda)
+            b = compute_b(gamma1[t],alpha[t],_lambda)
+            c = compute_c(gamma1[t],alpha[t],_lambda)
+            omega1 = (-b+_np.sqrt(b**2-4*a*c))/(2*a)
+            a = compute_a(gamma2[t],alpha[t],_lambda)
+            b = compute_b(gamma2[t],alpha[t],_lambda)
+            c = compute_c(gamma2[t],alpha[t],_lambda)
+            omega2 = (-b+_np.sqrt(b**2-4*a*c))/(2*a)
+            a = compute_a(gamma3[t],alpha[t],_lambda)
+            b = compute_b(gamma3[t],alpha[t],_lambda)
+            c = compute_c(gamma3[t],alpha[t],_lambda)
+            omega3 = (-b+_np.sqrt(b**2-4*a*c))/(2*a)
         #state 1: ACLF2
         survival1 = (pre_transplant['state1'][t]+pre_transplant['state1'][t])/2
         tp[t,0,0,0] = alpha[t]*(survival1)*omega1
@@ -123,6 +148,9 @@ def mdp(alpha,beta,rr,small):
         tp[t+1] = tp[t]
         new_tp[tt,0] = tp[t,0]@tp[t,0]
         new_tp[tt,1] = tp[t,1]
+        print('**********************')
+        print(new_tp[tt,0,:,2])
+        print('**********************')
         #reward
         new_rw[tt,0:3,0] = 0.4/(365)+_lambda*((1-gamma1[t])*0.4/(365))
         new_rw[tt,3:6,0] = 0.4/(365)+_lambda*((1-gamma2[t])*0.4/(365))
@@ -181,10 +209,12 @@ from matplotlib import collections  as mc
 #0.7,0.8 to 0.698,0.8
 #0.7,0.9 to 0.698,0.9
 alpha = _np.repeat(0.7,28)
+alpha2 = _np.repeat(0.7,28)
 beta = alpha
-rr=0.8
-v1o,r1o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol=mdp(alpha,beta,rr,0)
-v2o,r2o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol_l=mdp(alpha,beta,rr,1)
+beta2 = alpha2
+rr=0.7
+v1o,r1o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol=mdp([0.9,0.95,1],alpha,beta,rr,0,0)
+v2o,r2o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol_l=mdp([0.9,0.95,1],alpha2,beta2,rr,1,0)
 diff = _np.zeros((3,14))
 diff_pol = [[(0,0)for j in range(14)] for i in range(3)]
 for t in range(14):
@@ -233,26 +263,28 @@ print(27209*2343+24256*1364+27044*889)
 print('########################')
 print('check thm 4')
 
-max_ = -99999
 # =============================================================================
+# max_ = -99999
+# # =============================================================================
+# # for t in range(27):
+# #     rw[t,2,1] = rw[t,2,0]+_lambda*tp[t,0,2,:]@rw[t+1,:,1]
+# #     rw[t,5,1] = rw[t,5,0]+_lambda*tp[t,0,5,:]@rw[t+1,:,1]
+# #     rw[t,8,1] = rw[t,8,0]+_lambda*tp[t,0,8,:]@rw[t+1,:,1]
+# # =============================================================================
 # for t in range(27):
-#     rw[t,2,1] = rw[t,2,0]+_lambda*tp[t,0,2,:]@rw[t+1,:,1]
-#     rw[t,5,1] = rw[t,5,0]+_lambda*tp[t,0,5,:]@rw[t+1,:,1]
-#     rw[t,8,1] = rw[t,8,0]+_lambda*tp[t,0,8,:]@rw[t+1,:,1]
+#     for ss in range(9):
+#         if rw[t,ss,1]<rw[t,ss,0]+_lambda*tp[t,0,ss,:]@rw[t+1,:,1]:
+#             rw[t,ss,1]=rw[t,ss,0]+_lambda*tp[t,0,ss,:]@rw[t+1,:,1]
+# s = 7
+# for t in range(28):        
+#     print(t)
+#     print(rw[t,s,0]+_lambda*tp[t,0,s,:]@rw[t,:,1]-v1o[s,int(0.5*t)])
+#     print('************')
+#     #print(-new_lambda*c_k +new_rw[t,s,0]+new_lambda*new_tp[t,0,s,:]@new_rw[t,:,1]-v1o[s,int(0.5*t)])
+#     if rw[t,s,0]+_lambda*tp[t,0,s,:]@rw[t,:,1]-v1o[s,int(0.5*t)]> max_:
+#         max_ = rw[t,s,0]+_lambda*tp[t,0,s,:]@rw[t,:,1]-v1o[s,int(0.5*t)]
+# print(max_)
 # =============================================================================
-for t in range(27):
-    for ss in range(9):
-        if rw[t,ss,1]<rw[t,ss,0]+_lambda*tp[t,0,ss,:]@rw[t+1,:,1]:
-            rw[t,ss,1]=rw[t,ss,0]+_lambda*tp[t,0,ss,:]@rw[t+1,:,1]
-s = 7
-for t in range(28):        
-    print(t)
-    print(rw[t,s,0]+_lambda*tp[t,0,s,:]@rw[t,:,1]-v1o[s,int(0.5*t)])
-    print('************')
-    #print(-new_lambda*c_k +new_rw[t,s,0]+new_lambda*new_tp[t,0,s,:]@new_rw[t,:,1]-v1o[s,int(0.5*t)])
-    if rw[t,s,0]+_lambda*tp[t,0,s,:]@rw[t,:,1]-v1o[s,int(0.5*t)]> max_:
-        max_ = rw[t,s,0]+_lambda*tp[t,0,s,:]@rw[t,:,1]-v1o[s,int(0.5*t)]
-print(max_)
 
 '''
 def upper(state):

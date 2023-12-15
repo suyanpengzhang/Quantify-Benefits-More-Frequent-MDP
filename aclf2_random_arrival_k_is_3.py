@@ -25,13 +25,14 @@ print(post_transplant)
 
 ##########################################################
 
-def mdp(alpha,beta,rr,small):
+def mdp(omega,alpha,beta,rr,small):
+    
     gamma1 = 1-pre_transplant['state1']
     gamma2 = 1-pre_transplant['state2']
     gamma3 = 1-pre_transplant['state3']
-    omega1 = 0.9
-    omega2 = 0.95
-    omega3 = 1
+    omega1 = omega[0]#0.9
+    omega2 = omega[1]#0.95
+    omega3 = omega[2]
     rw = _np.zeros([14*4,11,2])
     new_rw = _np.zeros([14,11,2])
     new_tp = _np.zeros([14,2,11,11])
@@ -121,13 +122,15 @@ def mdp(alpha,beta,rr,small):
         tp[t,1,9,9] = 1
         tp[t,1,10,9] = 1
         tp[t,0]/_np.sum(tp[t,0],axis=1)
-        w, v = LA.eig(tp[t,0])
-        for i in range(len(w)):
-            if w[i]<10**(-8):
-                w[i]=0
-        w = w**(0.5)
-        new = v@_np.diag(w)@_np.linalg.inv(v)
-        tp[t,0] = new
+# =============================================================================
+#         w, v = LA.eig(tp[t,0])
+#         for i in range(len(w)):
+#             if w[i]<10**(-8):
+#                 w[i]=0
+#         w = w**(0.5)
+#         new = v@_np.diag(w)@_np.linalg.inv(v)
+#         tp[t,0] = new
+# =============================================================================
         tp[t+1] = tp[t]
         tp[t+2] = tp[t]
         tp[t+3] = tp[t]
@@ -193,8 +196,8 @@ from matplotlib import collections  as mc
 alpha = _np.repeat(0.7,14*4)
 beta = alpha
 rr=0.8
-v1o,r1o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol=mdp(alpha,beta,rr,0)
-v2o,r2o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol_l=mdp(alpha,beta,rr,1)
+v1o,r1o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol=mdp([1,1,1],alpha,beta,rr,0)
+v2o,r2o,tp,new_tp,_lambda,new_lambda,rw,new_rw,pol_l=mdp([0.5,0.5,0.5],alpha,beta,rr,1)
 diff = _np.zeros((3,14))
 for t in range(14):
     diff[0,t] = v2o[1,4*t]-v1o[1,t]
